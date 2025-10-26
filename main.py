@@ -1,3 +1,5 @@
+# main.py
+
 # --- Imports ---
 import bcrypt
 import base64
@@ -52,8 +54,6 @@ def download_nltk_data():
             print(f"✅ NLTK data '{package_id}' downloaded successfully.")
 
 # --- NLTK Initialization ---
-# This is executed when Vercel runs the file during initialization.
-# It's less prone to failure here than in a build command.
 try:
     download_nltk_data()
 except Exception as e:
@@ -96,7 +96,8 @@ except Exception as e:
 
 # --- Groq Client ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = "openai/gpt-oss-120b" # Corrected/Commonly used model name
+# --- UPDATED: Use a standard Groq model name ---
+GROQ_MODEL = "openai/gpt-oss-120b" 
 groq = None
 try:
     if not GROQ_API_KEY:
@@ -107,26 +108,30 @@ except Exception as e:
     print(f"🔥 Groq client initialization failed: {e}")
     groq = None
 
-# --- MongoDB Client Setup ---
-# In main.py, around line 99
-
+# --- MongoDB Client Setup (Vercel Fixes Applied Here) ---
+db = None # Initialize db as None
 try:
-    database.load_config() # Loads .env file
+    database.load_config() # Loads .env file for local dev (ignored by Vercel)
+    
+    # 🛑 VERCEL FIX: Check for URI explicitly before attempting connection 🛑
+    if not os.getenv("MONGO_URI"): 
+        raise Exception("MongoDB URI environment variable (MONGO_URI) is missing.")
+        
     db = database.get_db() # Connects to MongoDB
+    
     if db is None:
-        raise Exception("Database connection returned None.")
+        raise Exception("Database connection returned None (check URI/network).")
     else:
-        # database.setup_indexes(db) # Uncomment if needed for build/deploy
+        print("✅ MongoDB connection successful.")
         pass
         
 except Exception as e:
     print(f"🔥🔥🔥 FATAL: Could not connect to MongoDB: {e}")
+    db = None # Ensure db remains None on failure
 
 
 # --- Frontend Serving Routes ---
 
-# Vercel will handle static files based on vercel.json.
-# These routes serve the HTML pages, typically for the root and explicit paths.
 @app.route('/')
 def serve_root():
     # As per vercel.json, this will handle the root path.
@@ -152,7 +157,7 @@ def serve_profile():
 
 @app.route('/api/signup', methods=['POST'])
 def signup_route():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
     
     data = request.json
     email = data.get('email')
@@ -184,7 +189,7 @@ def signup_route():
 
 @app.route('/api/login', methods=['POST'])
 def login_route():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
 
     data = request.json
     email = data.get('email')
@@ -209,7 +214,7 @@ def login_route():
 
 @app.route('/api/auto_login_check', methods=['POST'])
 def auto_login_check_route():
-    if db is None: return jsonify({"isValid": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"isValid": False, "message": "Login failed. Could not connect to server."}), 503
     
     data = request.json
     email = data.get('email')
@@ -229,7 +234,7 @@ def auto_login_check_route():
 
 @app.route('/api/profile', methods=['GET'])
 def get_user_profile_route():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
 
     email = request.args.get('email')
     if not email: return jsonify({"success": False, "message": "Email query parameter required."}), 400
@@ -294,7 +299,7 @@ def serve_user_avatar(user_id):
 
 @app.route('/api/profile', methods=['POST'])
 def update_profile_route():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
     
     email = request.form.get('email')
     display_name = request.form.get('display_name')
@@ -353,7 +358,7 @@ def update_profile_route():
 
 @app.route('/api/chat_history', methods=['GET'])
 def load_chat_history_route():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
     
     email = request.args.get('email')
     if not email: return jsonify({"success": False, "message": "Email query parameter required."}), 400
@@ -374,7 +379,7 @@ def load_chat_history_route():
 
 @app.route('/api/forget_memory', methods=['POST'])
 def forget_memory_route():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
     
     data = request.json
     email = data.get('email')
@@ -448,7 +453,7 @@ def chat_with_model(prompt, history, emotion):
 # --- Main Chat Endpoint ---
 @app.route('/api/chat', methods=['POST'])
 def chat_endpoint():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
 
     data = request.json
     email = data.get('email')
@@ -495,7 +500,6 @@ def chat_endpoint():
 
 
 # -------------------------------------------------------------------------
-# 🛑 CRITICAL FIX FOR VERCEL DEPLOYMENT 🛑
-# REMOVE the 'handler' function and the 'if __name__ == "__main__":' block.
-# Vercel's Python runtime will automatically look for and run the 'app' instance.
+# The Flask app instance 'app' is the Vercel entry point.
+# DO NOT add the if __name__ == "__main__": app.run() block back in.
 # -------------------------------------------------------------------------
