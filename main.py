@@ -20,7 +20,7 @@ from bson.objectid import ObjectId
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 
-import database
+import database # Your database module
 
 # --- Configuration & Setup ---
 # Tell Flask where to find static files (CSS, JS, images)
@@ -43,33 +43,42 @@ def download_nltk_data():
     for zip_path, package_id in required_data.items():
         try:
             nltk.data.find(zip_path.replace('.zip', ''))
-            #print(f"✅ NLTK data '{package_id}' found.")
+            print(f"✅ NLTK data '{package_id}' found.")
         except LookupError:
-            #print(f"⏳ NLTK data '{package_id}' not found. Downloading...")
+            print(f"⏳ NLTK data '{package_id}' not found. Downloading...")
             nltk.download(package_id)
-            #print(f"✅ NLTK data '{package_id}' downloaded successfully.")
+            print(f"✅ NLTK data '{package_id}' downloaded successfully.")
 
 # --- RUN THE DOWNLOAD ONCE AT BUILD TIME ---
-download_nltk_data() # Usually run outside the main block if needed at build time
+download_nltk_data() # Usually uncommented for Vercel build
 
 # --- Firebase Initialization ---
 try:
-    firebase_key_base64 = os.getenv("FIREBASE_KEY_BASE64") # Vercel Variable
+    firebase_key_base64 = os.getenv("FIREBASE_KEY_BASE64")
 
+    # --- Vercel (Production) ---
     if firebase_key_base64:
         # Decode the Base64 string into JSON
         firebase_key_json = base64.b64decode(firebase_key_base64).decode('utf-8')
         key_dict = json.loads(firebase_key_json)
-        cred = credentials.Certificate(key_dict)
-        if not firebase_admin._apps: # Prevent re-initialization error
-             firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin SDK initialized successfully from ENV variable.")
 
-    elif os.path.exists("serviceAccountKey.json"): # Local Fallback
+        cred = credentials.Certificate(key_dict)
+        # Check if Firebase app is already initialized to prevent error
         if not firebase_admin._apps:
-             cred = credentials.Certificate("serviceAccountKey.json")
-             firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin SDK initialized successfully from local file.")
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin SDK initialized successfully from ENV variable.")
+        else:
+            print("✅ Firebase Admin SDK already initialized.")
+
+    # --- Local Fallback ---
+    elif os.path.exists("serviceAccountKey.json"):
+        # Check if Firebase app is already initialized
+        if not firebase_admin._apps:
+            cred = credentials.Certificate("serviceAccountKey.json")
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin SDK initialized successfully from local file.")
+        else:
+             print("✅ Firebase Admin SDK already initialized.")
 
     else:
         print("🔥 Firebase credentials not found (no ENV var or local file).")
@@ -79,7 +88,7 @@ except Exception as e:
 
 # --- Groq Client ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = "openai/gpt-oss-120b"
+GROQ_MODEL = "openai/gpt-oss-120b" # Ensure this model name is correct/available
 groq = None
 try:
     if not GROQ_API_KEY:
@@ -97,42 +106,43 @@ try:
     db = database.get_db() # Connects to MongoDB
     if db is None:
         raise Exception("Database connection returned None.")
+    else:
+        # --- ADDED: Call setup_indexes ---
+        database.setup_indexes(db) # Ensure indexes exist on startup
+        # --- END ---
+
 except Exception as e:
-    print(f"🔥🔥🔥 FATAL: Could not connect to MongoDB: {e}")
+    print(f"🔥🔥🔥 FATAL: Could not connect to MongoDB or setup indexes: {e}")
 
 
 # --- Frontend Serving Routes ---
 
 @app.route('/')
 def serve_index():
-    """Serves the main chat page (index.html)."""
-    return send_from_directory(STATIC_FOLDER, 'login.html') # Send to login first
+    return send_from_directory(STATIC_FOLDER, 'login.html')
 
 @app.route('/chat')
 def serve_chat():
-    """Serves the main chat page (index.html)."""
     return send_from_directory(STATIC_FOLDER, 'index.html')
 
 @app.route('/login')
 def serve_login():
-    """Serves the login page."""
     return send_from_directory(STATIC_FOLDER, 'login.html')
 
 @app.route('/signup')
 def serve_signup():
-    """Serves the signup page."""
     return send_from_directory(STATIC_FOLDER, 'signup.html')
 
 @app.route('/profile')
 def serve_profile():
-    """Serves the profile edit page."""
+    # Note: This route might become unnecessary if profile editing is fully integrated
+    # Keep it for now if profile.html is still used as a fallback or separate page
     return send_from_directory(STATIC_FOLDER, 'profile.html')
 
 # --- Authentication Logic (Using MongoDB) ---
 
 @app.route('/api/signup', methods=['POST'])
 def signup_route():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
     
     data = request.json
@@ -144,15 +154,13 @@ def signup_route():
 
     try:
         user_id = database.register_user(db, email, password)
-        
         if user_id is None:
             return jsonify({"success": False, "message": "This email is already registered."}), 409
-
     except Exception as e:
         print(f"Signup DB Error: {e}")
         return jsonify({"success": False, "message": "Database error during signup."}), 500
 
-    # Try Firebase Auth (same as before)
+    # Try Firebase Auth
     try:
         if firebase_admin._apps:
             auth.create_user(email=email)
@@ -160,7 +168,6 @@ def signup_route():
         else:
             print("Firebase not initialized, skipping Firebase user creation.")
     except Exception as e:
-        # Ignore if user already exists in Firebase, might happen if DB signup failed before
         if 'EMAIL_EXISTS' not in str(e):
              print(f"Warning: Could not create user in Firebase Auth console: {e}")
 
@@ -168,7 +175,6 @@ def signup_route():
 
 @app.route('/api/login', methods=['POST'])
 def login_route():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
 
     data = request.json
@@ -194,7 +200,6 @@ def login_route():
 
 @app.route('/api/auto_login_check', methods=['POST'])
 def auto_login_check_route():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
     
     data = request.json
@@ -215,7 +220,6 @@ def auto_login_check_route():
 
 @app.route('/api/profile', methods=['GET'])
 def get_user_profile_route():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
 
     email = request.args.get('email')
@@ -223,21 +227,19 @@ def get_user_profile_route():
 
     try:
         user_doc = database.get_user_by_email(db, email)
-        
         if not user_doc:
             return jsonify({"success": False, "message": "User not found"}), 404
 
         profile = user_doc.get('profile', {})
         user_id_str = str(user_doc.get('_id'))
         
-        # Check if user has uploaded a profile picture
         has_avatar = profile.get('profile_pic') and profile['profile_pic'].get('data')
-        avatar_url = f"/api/avatar/{user_id_str}" if has_avatar else None # Use None if no avatar
+        avatar_url = f"/api/avatar/{user_id_str}" if has_avatar else None
 
         profile_data = {
             "email": user_doc.get('email'),
             "display_name": profile.get('display_name', email.split('@')[0]),
-            "avatar": avatar_url, # Use the dynamic URL or None
+            "avatar": avatar_url,
             "status": profile.get('bio', "Hey there! I’m using Luvisa 💗")
         }
         return jsonify({"success": True, "profile": profile_data}), 200
@@ -251,14 +253,13 @@ def get_luvisa_profile_route():
     profile_data = {
         "email": "luvisa@ai.com",
         "display_name": "Luvisa 💗",
-        "avatar": "/avatars/luvisa_avatar.png", # Use static path
+        "avatar": "/avatars/luvisa_avatar.png",
         "status": "Thinking of you... 💭"
     }
     return jsonify({"success": True, "profile": profile_data}), 200
 
 @app.route('/api/avatar/<user_id>')
 def serve_user_avatar(user_id):
-    # --- CORRECTED CHECK ---
     if db is None: return "Database connection error.", 503
 
     try:
@@ -270,19 +271,20 @@ def serve_user_avatar(user_id):
                 mimetype=pic_data.get('content_type', 'application/octet-stream')
             )
         else:
-            # Return the default avatar if user has no pic
-            return send_from_directory(os.path.join(STATIC_FOLDER, 'avatars'), 'default_avatar.png')
+            default_path = os.path.join(STATIC_FOLDER, 'avatars', 'default_avatar.png')
+            if os.path.exists(default_path):
+                 return send_from_directory(os.path.join(STATIC_FOLDER, 'avatars'), 'default_avatar.png')
+            else:
+                 return "Default avatar not found", 404 # Handle missing default
             
-    except (FileNotFoundError):
-        # Fallback if default_avatar.png is also missing
-        return "Avatar not found", 404
+    except FileNotFoundError: # Should be caught by os.path.exists now
+        return "Default avatar not found", 404
     except Exception as e:
         print(f"Error serving avatar for {user_id}: {e}")
         return "Error serving avatar", 500
 
 @app.route('/api/profile', methods=['POST'])
 def update_profile_route():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
     
     email = request.form.get('email')
@@ -294,7 +296,7 @@ def update_profile_route():
     if not user_doc: return jsonify({"success": False, "message": "User not found"}), 404
 
     user_id = user_doc['_id']
-    avatar_updated = False # Flag to know if we need to update avatar url
+    avatar_updated_successfully = False # Flag
 
     try:
         # 1. Update text fields
@@ -307,33 +309,41 @@ def update_profile_route():
             
             success = database.update_profile_picture(db, user_id, image_data, content_type)
             if not success:
-                return jsonify({"success": False, "message": "Profile text updated, but image was too large (50KB limit)."}), 413
-            avatar_updated = True # Mark avatar as updated
+                # Still return success for text fields, but indicate avatar failure
+                return jsonify({
+                    "success": False, # Indicate overall operation had an issue
+                    "message": "Profile text updated, but image was too large (50KB limit).",
+                    "profile_text_updated": True
+                 }), 413
+            avatar_updated_successfully = True
     
     except Exception as e:
         print(f"🔥 Profile update DB error: {e}")
         return jsonify({"success": False, "message": "Database error updating profile."}), 500
 
-    # 3. Determine the correct avatar URL to return
-    # Check again if avatar data exists after potential update
-    updated_user_doc = database.get_user_by_id(db, user_id)
-    has_avatar_now = updated_user_doc.get('profile', {}).get('profile_pic', {}).get('data')
+    # 3. Fetch potentially updated avatar status
+    updated_user_doc = database.get_user_by_id(db, user_id) # Re-fetch
+    has_avatar_now = updated_user_doc.get('profile', {}).get('profile_pic', {}).get('data') is not None
     avatar_url = f"/api/avatar/{str(user_id)}" if has_avatar_now else None
 
     updated_profile = {
         "email": email,
         "display_name": display_name,
-        "avatar": avatar_url, # Send back the correct URL
+        "avatar": avatar_url,
         "status": status_message
     }
-    return jsonify({"success": True, "message": "Profile updated successfully", "profile": updated_profile}), 200
+    return jsonify({
+        "success": True,
+        "message": "Profile updated successfully",
+        "profile": updated_profile,
+        "avatar_updated": avatar_updated_successfully
+        }), 200
 
 
 # --- Chat History (Using MongoDB) ---
 
 @app.route('/api/chat_history', methods=['GET'])
 def load_chat_history_route():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
     
     email = request.args.get('email')
@@ -344,7 +354,6 @@ def load_chat_history_route():
 
     try:
         history = database.get_chat_history(db, user_doc['_id'])
-        # Format timestamp correctly
         formatted_history = [
             {"sender": r['sender'], "message": r['message'], "time": r['timestamp'].strftime("%Y-%m-%d %H:%M:%S") if isinstance(r.get('timestamp'), datetime) else str(r.get('timestamp'))}
             for r in history
@@ -356,7 +365,6 @@ def load_chat_history_route():
 
 @app.route('/api/forget_memory', methods=['POST'])
 def forget_memory_route():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
     
     data = request.json
@@ -374,7 +382,7 @@ def forget_memory_route():
         return jsonify({"success": False, "message": "Database error forgetting memory."}), 500
 
 
-# --- Emotion Detection & AI Interaction (Core logic unchanged) ---
+# --- Emotion Detection & AI Interaction ---
 def detect_emotion_tone(text):
     try:
         emotions = te.get_emotion(text)
@@ -387,39 +395,27 @@ def detect_emotion_tone(text):
 
 def tone_prompt(emotion):
     tones = {
-        "Happy": "playfully teasing and cheerful",
-        "Sad": "extra gentle, comforting, and nurturing",
-        "Angry": "calm, validating, and deeply reassuring",
-        "Fear": "protective, soothing, and very present",
-        "Surprise": "curious, excited, and engaging",
-        "Neutral": "warm, attentive, and softly romantic"
-    }
+        "Happy": "playfully teasing and cheerful", "Sad": "extra gentle, comforting, and nurturing",
+        "Angry": "calm, validating, and deeply reassuring", "Fear": "protective, soothing, and very present",
+        "Surprise": "curious, excited, and engaging", "Neutral": "warm, attentive, and softly romantic" }
     return tones.get(emotion, tones["Neutral"])
 
 def add_emojis_to_response(response_text):
     inline_emoji_map = {
-        "love": "❤️", "happy": "😊", "sad": "😥", "laugh": "😂",
-        "smile": "😄", "cry": "😢", "miss you": "🥺", "kiss": "😘",
-        "hug": "🤗", "think": "🤔", "sweet": "🥰", "blush": "😊",
-        "heart": "❤️", "star": "⭐", "yay": "🎉", "oh no": "😟",
-        "sorry": "😔", "please": "🙏", "hi": "👋", "hello": "👋",
-        "bye": "👋", "good night": "😴", "sleep": "😴", "dream": "💭"
-    }
-    # Ensure response_text is a string
-    if not isinstance(response_text, str):
-        response_text = str(response_text)
-        
+        "love": "❤️", "happy": "😊", "sad": "😥", "laugh": "😂", "smile": "😄", "cry": "😢",
+        "miss you": "🥺", "kiss": "😘", "hug": "🤗", "think": "🤔", "sweet": "🥰", "blush": "😊",
+        "heart": "❤️", "star": "⭐", "yay": "🎉", "oh no": "😟", "sorry": "😔", "please": "🙏",
+        "hi": "👋", "hello": "👋", "bye": "👋", "good night": "😴", "sleep": "😴", "dream": "💭" }
+    if not isinstance(response_text, str): response_text = str(response_text)
     for keyword, emoji_char in inline_emoji_map.items():
          pattern = r'\b' + re.escape(keyword) + r'\b'
-         # Added the missing 'string' argument
          response_text = re.sub(pattern, r'\g<0> ' + emoji_char, response_text, count=1, flags=re.IGNORECASE)
     return emoji.emojize(response_text)
 
 def filter_response(response_text):
-     # Ensure response_text is a string
-    if not isinstance(response_text, str):
-        response_text = str(response_text)
-    return response_text.replace("llama", "Luvisa💗").strip()
+    if not isinstance(response_text, str): response_text = str(response_text)
+    # Corrected filter keyword if needed
+    return response_text.replace("Luvisa💗", "Luvisa💗").strip() # Example: No change needed? Adjust if AI uses wrong name
 
 def chat_with_model(prompt, history, emotion):
     if not groq: return "I'm having a little trouble connecting right now😥, but I'm still here to listen. ❤️"
@@ -430,14 +426,9 @@ def chat_with_model(prompt, history, emotion):
     Always reply with warmth, empathy, and soft emotional understanding.
     """
     messages = [{"role": "system", "content": system_prompt}]
-    
-    ai_history = [
-        {"role": "user" if item.get('sender') == 'user' else "assistant", "content": item.get('message', '')}
-        for item in history[-5:] # Get last 5 messages
-    ]
+    ai_history = [ {"role": "user" if item.get('sender') == 'user' else "assistant", "content": item.get('message', '')} for item in history[-5:] ]
     messages.extend(ai_history)
     messages.append({"role": "user", "content": prompt})
-    
     try:
         chat_completion = groq.chat.completions.create(messages=messages, model=GROQ_MODEL, temperature=0.9, max_tokens=1024, top_p=1)
         response_text = chat_completion.choices[0].message.content
@@ -445,10 +436,9 @@ def chat_with_model(prompt, history, emotion):
     except Exception as e:
         print(f"🔥 Groq client error: {e}"); return "I'm having a little trouble connecting right now😥, but I'm still here to listen. ❤️"
 
-# --- Main Chat Endpoint (Using MongoDB for saving) ---
+# --- Main Chat Endpoint ---
 @app.route('/api/chat', methods=['POST'])
 def chat_endpoint():
-    # --- CORRECTED CHECK ---
     if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
 
     data = request.json
@@ -461,25 +451,20 @@ def chat_endpoint():
     if not user_doc: return jsonify({"success": False, "message": "User not found."}), 404
 
     user_id = user_doc['_id']
-    # --- CORRECTED TIMESTAMP ---
-    current_timestamp = datetime.now(timezone.utc) 
+    current_timestamp = datetime.now(timezone.utc)
 
-    # 1. Save user message to MongoDB
+    # 1. Save user message
     try:
         database.add_message_to_history(db, user_id, 'user', text, current_timestamp)
     except Exception as e:
         print(f"🔥 Save user message DB error: {e}")
 
     # 2. Prepare for AI call
-    time.sleep(random.uniform(1.2, 2.2))
+    time.sleep(random.uniform(1.2, 2.2)) # Simulate typing
     history = []
     try:
         history_docs = database.get_chat_history(db, user_id)
-        # Format for AI model, ensure message exists
-        history = [
-            {"sender": r.get('sender'), "message": r.get('message', '')} 
-            for r in history_docs
-        ]
+        history = [ {"sender": r.get('sender'), "message": r.get('message', '')} for r in history_docs ]
     except Exception as e:
          print(f"Error loading history for AI: {e}")
 
@@ -488,24 +473,27 @@ def chat_endpoint():
     # 3. Get AI reply
     reply = chat_with_model(text, history, emotion)
     enhanced_reply = add_emojis_to_response(reply)
-    # --- CORRECTED TIMESTAMP ---
     ai_timestamp = datetime.now(timezone.utc)
 
-    # 4. Save AI reply to MongoDB
+    # 4. Save AI reply
     try:
         database.add_message_to_history(db, user_id, 'luvisa', enhanced_reply, ai_timestamp)
     except Exception as e:
         print(f"🔥 Save Luvisa message DB error: {e}")
 
-    # 5. Send reply back to frontend
+    # 5. Send reply
     return jsonify({"success": True, "reply": enhanced_reply, "detected_emotion": emotion}), 200
 
 # --- Start Flask App ---
 if __name__ == '__main__':
-    download_nltk_data() # Run NLTK download when script starts
-    # --- CORRECTED CHECK ---
+    # NLTK download should be run during build for Vercel,
+    # but run here for local execution if not already downloaded.
+    try:
+        download_nltk_data()
+    except Exception as e:
+        print(f"Warning: NLTK download failed on startup: {e}")
+
     if db is None:
-        print("🚨 CRITICAL: MongoDB client failed to initialize. Database operations will fail. Check .env file and Atlas IP access.")
+        print("🚨 CRITICAL: MongoDB client failed to initialize. Database operations will fail.")
     print("🚀 Starting Flask application...")
-    # Use 0.0.0.0 to make accessible on local network if needed
     app.run(host='0.0.0.0', port=5000, debug=True)
