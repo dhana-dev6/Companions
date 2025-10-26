@@ -114,7 +114,7 @@ try:
     database.load_config() # Loads .env file for local dev (ignored by Vercel)
     
     # 🛑 VERCEL FIX: Check for URI explicitly before attempting connection 🛑
-    if not os.getenv("MONGO_URI"): 
+    if not os.getenv("MONGO_CONNECTION_STRING"): 
         raise Exception("MongoDB URI environment variable (MONGO_URI) is missing.")
         
     db = database.get_db() # Connects to MongoDB
