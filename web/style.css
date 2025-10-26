@@ -1,0 +1,475 @@
+/* =================================
+   Luvisa - Final Stylesheet (Push Sidebars, Non-Blocking Overlay)
+   ================================= */
+
+:root {
+  --luvisa-color: #d87093;
+  --bg: linear-gradient(180deg, #f8bbd0, #bbdefb);
+  --bubble-user: #4169E1; /* Royal Blue */
+  --bubble-luvisa: #D1D0D1; /* Light Greyish */
+  --muted-light: rgba(255, 255, 255, 0.7); /* For dark bubbles */
+  --muted-dark: rgba(0, 0, 0, 0.5); /* For light bubbles */
+  /* Sidebar Widths */
+  --sidebar-width: 300px;
+  --header-height: 60px;
+  --profile-panel-width: 300px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  color: #fff;
+  overflow: hidden;
+}
+
+/* App container - Handles Push Effect */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw; /* Start full width */
+  position: relative; /* Needs to be relative for margins to push */
+  overflow: hidden;
+  /* Smooth transitions for push */
+  transition: margin-left 0.3s ease, margin-right 0.3s ease, width 0.3s ease;
+  margin-left: 0;
+  margin-right: 0;
+  background: var(--bg); /* Keep background if needed */
+}
+
+/* Header */
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 20px;
+  background: linear-gradient(135deg, rgba(205, 180, 219, 0.85), rgba(189, 224, 254, 0.85));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  height: var(--header-height);
+  position: sticky; /* Keep sticky relative to app-container */
+  top: 0;
+  z-index: 50;
+  border-radius: 0 0 15px 15px;
+  flex-shrink: 0;
+}
+
+.left-header { display: flex; align-items: center; gap: 10px; }
+.menu-icon { font-size: 28px; color: white; cursor: pointer; padding: 5px; border-radius: 50%; transition: background 0.2s ease; margin-right: 8px; }
+.menu-icon:hover { background: rgba(255, 255, 255, 0.1); }
+.profile-pic { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.7); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); cursor: pointer; transition: transform 0.2s ease; }
+.profile-pic:hover { transform: scale(1.1); }
+.chat-title span { font-weight: 700; font-size: 1rem; color: #ffffff; }
+.chat-title small { display: block; font-size: 0.75rem; color: rgba(255, 255, 255, 0.85); }
+.right-header { display: flex; align-items: center; gap: 12px; }
+
+/* Chatbox Area */
+.chatbox { flex-grow: 1; overflow-y: auto; padding: 20px 22px 90px; display: flex; flex-direction: column; gap: 12px; background-size: cover; background-position: center; transition: background-image 1s ease-in-out; position: relative; }
+.chatbox > * { position: relative; z-index: 1; }
+
+/* Message Bubbles */
+.message { max-width: 72%; display: flex; animation: fadeIn .24s ease-in-out; }
+.luvisa-message { align-self: flex-start; }
+.user-message { align-self: flex-end; }
+.message-bubble { padding: 10px 16px 6px 16px; border-radius: 14px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); line-height: 1.4; word-break: break-word; position: relative; }
+.luvisa-message .message-bubble { background: var(--bubble-luvisa); border-radius: 14px 14px 14px 6px; color: #000000; }
+.user-message .message-bubble { background: var(--bubble-user); border-radius: 14px 14px 6px 14px; color: #ffffff; }
+.message-time { display: block; font-size: 0.75rem; text-align: right; margin-top: 4px; margin-left: 0; white-space: nowrap; opacity: 0.8; }
+.luvisa-message .message-time { color: var(--muted-dark); }
+.user-message .message-time { color: var(--muted-light); }
+.message-text { font-size: 1rem; }
+
+/* Input area */
+/* Input area */
+.input-area {
+  display: flex; /* Keeps items in a row */
+  align-items: center; /* Vertically centers items */
+  justify-content: center; /* Horizontally centers the input+button group */
+  padding: 12px 18px;
+  background: transparent;
+  position: absolute; /* Keep absolute */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 100;
+  flex-shrink: 0;
+  gap: 10px; /* ADD space between input and button */
+  /* Remove position: relative; if it exists */
+}
+.input-area input { flex-grow: 1; max-width: 900px; padding: 12px 22px; font-size: 1rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50px; background: rgba(0, 0, 0, 0.2); color: #fff; outline: none; backdrop-filter: blur(10px); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.input-area input:focus { border-color: rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.3); }
+.input-area input::placeholder { color: rgba(255, 255, 255, 0.7); }
+#sendBtn { background: linear-gradient(135deg, #ffb6c1, #cdb4db); border: none; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; color: #fff; transition: all 0.25s ease; box-shadow: 0 2px 10px rgba(255, 192, 203, 0.4); flex-shrink: 0; display: flex; justify-content: center; align-items: center; margin-left: 10px; }
+#sendBtn:hover { transform: scale(1.1); box-shadow: 0 0 12px rgba(255, 182, 193, 0.7); }
+
+/* Typing Indicator */
+.typing-message .message-bubble { background: var(--bubble-luvisa); padding: 10px 14px; color: #000; }
+.typing-dots { display: flex; gap: 6px; align-items: center; }
+.typing-dots span { width: 7px; height: 7px; border-radius: 50%; background: #000; opacity: .5; animation: dot 1.3s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: .12s; }
+.typing-dots span:nth-child(3) { animation-delay: .24s; }
+@keyframes dot { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1.05); } }
+
+/* General Animation */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ======================= */
+/* SIDEBAR & PROFILE PANELS */
+/* ======================= */
+
+/* --- The Overlay (Visual Only, Non-Blocking) --- */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4); /* Darkens the background */
+  z-index: 999; /* Position it below the sidebars */
+  opacity: 0;   /* Start hidden */
+  pointer-events: none !important; /* CRITICAL: Make it ignore all mouse clicks/taps */
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.show {
+  opacity: 1; /* Make it visible */
+  /* DO NOT add pointer-events: auto; here */
+}
+
+/* --- Base Panel Styles (Fixed Position) --- */
+.sidebar-menu, .profile-panel {
+  position: fixed;
+  top: 0;
+  height: 100%;
+  z-index: 1000; /* Above overlay */
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  display: flex; /* Common for flex layout inside */
+  flex-direction: column;
+}
+
+/* --- Left Sidebar Menu (Glass Effect) --- */
+.sidebar-menu {
+  left: 0;
+  width: var(--sidebar-width);
+  background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.15);
+  transform: translateX(-100%); /* Start hidden left */
+  color: #ffffff;
+}
+.sidebar-menu.show { transform: translateX(0); } /* Slide in */
+
+/* --- Right Profile Panel --- */
+.profile-panel {
+  right: 0;
+  width: var(--profile-panel-width);
+  background: #ffffff; box-shadow: -2px 0 15px rgba(0, 0, 0, 0.15);
+  transform: translateX(100%); /* Start hidden right */
+  color: #333;
+}
+.profile-panel.show { transform: translateX(0); } /* Slide in */
+
+
+/* --- Sidebar Header --- */
+.sidebar-header { height: var(--header-height); display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); position: relative; flex-shrink: 0; }
+.sidebar-header-avatar-wrapper { cursor: pointer; }
+.sidebar-user-avatar { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.7); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+.sidebar-user-name { font-weight: 600; font-size: 1rem; color: #ffffff; margin-left: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.close-sidebar-icon { font-size: 28px; color: white; cursor: pointer; padding: 5px; border-radius: 50%; transition: background 0.2s ease; margin-left: auto; }
+.close-sidebar-icon:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* Dropdown Menu positioning */
+.dropdown-menu {
+    position: absolute; top: 65px; left: 10px; width: 260px;
+    background: rgba(40, 40, 40, 0.9); border-radius: 12px; padding: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px);
+    transform-origin: top left; transform: translateY(-6px) scale(0.98);
+    opacity: 0; pointer-events: none; transition: all .22s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15); z-index: 1001;
+}
+.dropdown-menu.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+.dropdown-profile{display:flex;gap:10px;align-items:center;padding:8px;}
+.dropdown-avatar{width:54px;height:54px;border-radius:50%;border:2px solid rgba(255, 255, 255, 0.7);}
+.dropdown-info span { color: #fff; }
+.dropdown-info small { color: rgba(255, 255, 255, 0.7); }
+.dropdown-actions{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.dropdown-actions button { background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; padding: 8px; border-radius: 8px; cursor: pointer; transition: background 0.2s ease; }
+.dropdown-actions button:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* --- Sidebar Content & Chat List --- */
+.sidebar-content { flex-grow: 1; overflow-y: auto; padding: 10px 8px; }
+.sidebar-title { font-size: 0.8em; font-weight: 600; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin: 10px 12px 15px; }
+.chat-list-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s ease; }
+.chat-list-item:hover { background: rgba(255, 255, 255, 0.1); }
+.chat-list-item.active { background: rgba(255, 255, 255, 0.15); }
+.chat-list-item.disabled { opacity: 0.6; cursor: not-allowed; }
+.chat-list-avatar { width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; }
+.placeholder-avatar { width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; font-size: 1.5em; font-weight: 600; color: rgba(255, 255, 255, 0.5); flex-shrink: 0; }
+.chat-list-info { flex-grow: 1; overflow: hidden; }
+.chat-list-name { display: block; font-weight: 500; color: #ffffff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.chat-list-preview { display: block; font-size: 0.85em; color: rgba(255, 255, 255, 0.7); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+
+/* --- Sidebar Footer --- */
+.sidebar-footer { margin-top: auto; padding: 15px 20px; border-top: 1px solid rgba(255, 255, 255, 0.2); background-color: transparent; text-align: center; flex-shrink: 0; }
+.feedback-button { display: inline-flex; align-items: center; gap: 6px; background-color: rgba(255, 255, 255, 0.15); color: #ffffff; border: none; border-radius: 20px; padding: 8px 15px; font-size: 0.85em; font-weight: 500; text-decoration: none; cursor: pointer; transition: background-color 0.2s ease; margin-bottom: 10px; }
+.feedback-button i { font-size: 1.1em; }
+.feedback-button:hover { background-color: rgba(255, 255, 255, 0.25); }
+.copyright-text { font-size: 0.75em; color: rgba(255, 255, 255, 0.5); margin: 0; }
+
+/* --- Luvisa Profile Panel --- */
+.profile-panel .luvisa-card { width: 100%; height: 100%; border-radius: 0; box-shadow: none; background: #fff; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.close-profile-btn { position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.1); color: #333; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 1.5em; cursor: pointer; z-index: 1001; transition: background 0.2s ease; }
+.close-profile-btn:hover { background: rgba(0, 0, 0, 0.2); }
+.profile-panel .luvisa-card .card-top { height: 35%; background: linear-gradient(135deg, #ffafcc, #bde0fe); position: relative; }
+.profile-panel .luvisa-card .card-avatar-wrapper { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); width: 120px; height: 120px; border-radius: 50%; border: 5px solid white; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25); z-index: 10; overflow: hidden; }
+.profile-panel .luvisa-card .card-avatar-preview { width: 100%; height: 100%; object-fit: cover; }
+.profile-panel .luvisa-card .card-bottom { height: 65%; background: #ffffff; padding: 90px 30px 30px 30px; display: flex; flex-direction: column; align-items: center; text-align: center; color: #333; }
+.profile-panel .luvisa-card .luvisa-card-name { margin: 0; font-size: 1.8em; font-weight: 600; color: #222; }
+.profile-panel .luvisa-card .luvisa-card-title { margin: 2px 0 20px 0; font-size: 0.9em; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+.profile-panel .luvisa-card .about-section { font-size: 0.95em; line-height: 1.6; color: #555; overflow-y: auto; padding-right: 10px; -webkit-overflow-scrolling: touch; width: 100%; flex-grow: 1; margin-bottom: 20px; }
+
+/* ======================= */
+/* PUSH EFFECTS            */
+/* ======================= */
+/* These rules apply the margin shifts */
+
+body.sidebar-open .app-container {
+  margin-left: var(--sidebar-width);
+  width: calc(100vw - var(--sidebar-width));
+}
+body.profile-panel-open .app-container {
+  margin-right: var(--profile-panel-width);
+  width: calc(100vw - var(--profile-panel-width));
+  margin-left: 0; /* Ensure left margin is reset */
+}
+body.sidebar-open.profile-panel-open .app-container {
+  margin-left: var(--sidebar-width);
+  margin-right: var(--profile-panel-width);
+  width: calc(100vw - var(--sidebar-width) - var(--profile-panel-width));
+}
+
+/* ======================= */
+/* NEW SETTINGS & SUBMENU STYLES */
+/* ======================= */
+
+.sidebar-separator {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.15);
+  margin: 15px 12px; /* Add some vertical spacing */
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px 20px; /* Consistent padding */
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  color: #ffffff; /* White text */
+  font-size: 0.95em;
+  font-weight: 500;
+}
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.sidebar-item i {
+  font-size: 1.3em;
+  opacity: 0.8;
+}
+
+.settings-item .arrow-icon {
+  margin-left: auto; /* Push arrow to the right */
+  font-size: 1.1em;
+  transition: transform 0.3s ease;
+}
+.settings-item.active .arrow-icon {
+  transform: rotate(180deg); /* Rotate arrow when open */
+}
+
+/* Submenu Styles */
+.submenu {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px 0; /* Add bottom margin */
+  max-height: 0; /* Hidden by default */
+  overflow: hidden;
+  transition: max-height 0.3s ease-out; /* Smooth transition */
+  padding-left: 20px; /* Indent submenu items */
+}
+
+.submenu.show {
+   /* Adjust max-height based on the number of items * estimated height */
+  max-height: 150px; /* Example: Allows space for 2-3 items */
+}
+
+.submenu li {
+  padding: 0;
+  margin: 0;
+}
+
+.submenu button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.85); /* Slightly muted white */
+  padding: 10px 15px 10px 30px; /* Indent text further */
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-family: inherit;
+  display: flex; /* Align icon and text */
+  align-items: center;
+  gap: 12px;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.submenu button i {
+  font-size: 1.1em;
+  opacity: 0.7;
+}
+
+.submenu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* Update Dropdown Actions - Move styles to submenu buttons */
+/* Comment out or remove these if they only style the moved buttons */
+/* .dropdown-actions { display: none; } */ /* Hide old container if empty */
+/* .dropdown-actions button { ... } */
+
+/* Keep Logout button style if it remains in dropdown */
+#profileDropdown .dropdown-actions button#logoutBtn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff; padding: 8px; border-radius: 8px; cursor: pointer;
+    transition: background 0.2s ease;
+    /* Add any specific styles needed for logout */
+}
+#profileDropdown .dropdown-actions button#logoutBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ======================= */
+/* CUSTOM SCROLLBAR STYLES */
+/* ======================= */
+
+/* Target scrollbar within the chatbox */
+#chatbox::-webkit-scrollbar {
+  width: 8px; /* Make scrollbar thinner */
+}
+
+/* Style the track (the background area of the scrollbar) */
+#chatbox::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1); /* Slightly dark transparent track */
+  border-radius: 10px; /* Rounded track */
+  margin: 5px 0; /* Add some top/bottom margin */
+}
+
+/* Style the thumb (the draggable part) */
+#chatbox::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3); /* Semi-transparent white thumb */
+  border-radius: 10px; /* Rounded thumb */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+}
+
+/* Style the thumb on hover */
+#chatbox::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5); /* Make it slightly brighter on hover */
+}
+
+/* Optional: For Firefox compatibility (less customization possible) */
+/* This just makes it thin and sets basic colors */
+#chatbox {
+  scrollbar-width: thin; /* "auto" or "thin" */
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.1); /* thumb track */
+}
+/* ======================= */
+/* CUSTOM SCROLLBAR STYLES (Revised Targeting) */
+/* ======================= */
+
+/* --- Target scrollable elements: chatbox, sidebar content, profile about section --- */
+#chatbox::-webkit-scrollbar,
+.sidebar-content::-webkit-scrollbar,
+.profile-panel .about-section::-webkit-scrollbar, /* Target specific scrollable area in profile */
+.edit-profile-content::-webkit-scrollbar /* Target specific scrollable area in edit profile */
+{
+  width: 8px;
+}
+
+/* Style the track */
+#chatbox::-webkit-scrollbar-track,
+.sidebar-content::-webkit-scrollbar-track,
+.profile-panel .about-section::-webkit-scrollbar-track,
+.edit-profile-content::-webkit-scrollbar-track
+{
+  background: rgba(0, 0, 0, 0.05); /* Very light track */
+  border-radius: 10px;
+  margin: 5px;
+}
+
+/* Style the thumb (draggable part) - Default for dark/glassy background */
+#chatbox::-webkit-scrollbar-thumb,
+.sidebar-content::-webkit-scrollbar-thumb,
+.edit-profile-content::-webkit-scrollbar-thumb /* Edit view uses glassy bg */
+{
+  background: rgba(255, 255, 255, 0.4); /* Slightly more visible white thumb */
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Specific override for the WHITE profile panel's about section thumb */
+.profile-panel .about-section::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3); /* Darker thumb */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Style the thumb on hover - Default */
+#chatbox::-webkit-scrollbar-thumb:hover,
+.sidebar-content::-webkit-scrollbar-thumb:hover,
+.edit-profile-content::-webkit-scrollbar-thumb:hover
+{
+  background: rgba(255, 255, 255, 0.6); /* Lighter thumb on hover */
+}
+
+/* Specific override for the WHITE profile panel thumb hover */
+.profile-panel .about-section::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5); /* Darker thumb on hover */
+}
+
+
+/* --- Firefox compatibility --- */
+#chatbox,
+.sidebar-content,
+.profile-panel .about-section, /* Target specific scrollable area */
+.edit-profile-content /* Target specific scrollable area */
+{
+  scrollbar-width: thin;
+  /* Default: thumb track (for chatbox & glassy sidebar) */
+  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(0, 0, 0, 0.05);
+}
+
+/* Specific override for WHITE profile panel Firefox */
+.profile-panel .about-section {
+    /* Darker thumb, light track */
+    scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.05);
+}
+
+/* --- Ensure the correct elements have overflow --- */
+/* These might already exist, but confirm they are set */
+.chatbox { overflow-y: auto; }
+.sidebar-content { overflow-y: auto; }
+.profile-panel .about-section { overflow-y: auto; }
+.edit-profile-content { overflow-y: auto; }
+
+/* REMOVE overflow-y: auto from outer containers if present */
+/* .sidebar-menu { overflow-y: hidden; } */ /* Example if it was set */
+/* .profile-panel { overflow-y: hidden; } */ /* Example if it was set */

@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-size: cover;
+    background-position: center;
+    transition: background-image 1s ease-in-out;
+}
+
+.auth-container {
+    width: 400px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 40px;
+    border-radius: 20px;
+    backdrop-filter: blur(15px);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: white;
+    animation: fadeIn 0.8s ease-in-out;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.luvisa-logo {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.7);
+    margin-bottom: 15px;
+}
+
+.form-header h2 {
+    margin: 0;
+    font-weight: 500;
+    font-size: 1.4em;
+}
+
+.auth-box {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-group {
+    position: relative;
+}
+
+.input-group i {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px 20px 14px 50px; /* Make space for icon */
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1em;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.7);
+}
+
+.input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+button {
+    background: linear-gradient(135deg, #ff8fa3, #e86dc3);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    padding: 14px;
+    font-size: 1.1em;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(255, 143, 163, 0.3);
+}
+
+button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255, 143, 163, 0.5);
+}
+
+/* Loading Spinner for Button */
+button.loading span {
+    visibility: hidden;
+    opacity: 0;
+}
+button.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    border: 3px solid transparent;
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 1s ease infinite;
+}
+
+.auth-switch {
+    text-align: center;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.auth-switch a {
+    color: #ffc2d1;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-message {
+    text-align: center;
+    min-height: 20px;
+    font-size: 0.9em;
+    color: #ffc2d1;
+}
+
+@keyframes spin {
+    from { transform: rotate(0turn); }
+    to { transform: rotate(1turn); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* Add this at the end of login.css */
+.otp-instruction {
+    font-size: 0.9em;
+    color: rgba(255, 255, 255, 0.8);
+    margin: -10px 0 10px 0;
+}

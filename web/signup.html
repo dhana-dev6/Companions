@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Luvisa Signup</title>
+    <link rel="stylesheet" href="login.css" />
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="form-header">
+            <img src="luvisa.png" alt="Luvisa" class="luvisa-logo">
+            <h2>Create your Luvisa account 💞</h2>
+        </div>
+        <div class="auth-box">
+            <div class="input-group">
+                <i class='bx bxs-envelope'></i>
+                <input type="email" id="signupEmail" placeholder="Enter your Email" required />
+            </div>
+            <div class="input-group">
+                <i class='bx bxs-lock-alt'></i>
+                <input type="password" id="signupPass" placeholder="Create a Password" required />
+            </div>
+            <button id="signupBtn"><span>Sign Up</span></button>
+            <p id="signupMsg" class="auth-message"></p>
+            <p class="auth-switch">Already have an account? <a href="login.html">Login</a></p>
+        </div>
+    </div>
+    <script src="auth.js"></script>
+</body>
+</html>

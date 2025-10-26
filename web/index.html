@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Luvisa💗 - Emotional Assistant</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <nav id="sidebarMenu" class="sidebar-menu">
+
+    <div id="defaultSidebarView">
+        <div class="sidebar-header">
+          <div class="sidebar-header-avatar-wrapper" id="userAvatarWrapper">
+              <img id="userAvatarHeader" src="avatars/default_avatar.png" alt="User" class="user-avatar sidebar-user-avatar" />
+          </div>
+          <span id="headerUserName" class="header-user-name sidebar-user-name">User</span>
+          <i class='bx bx-x close-sidebar-icon' id="closeSidebarIcon"></i>
+          </div>
+
+        <div class="sidebar-content">
+            <p class="sidebar-title">Companions</p>
+            <div class="chat-list">
+              <div class="chat-list-item active"> <img src="luvisa.png" alt="Luvisa" class="chat-list-avatar" /> <div class="chat-list-info"> <span class="chat-list-name">Luvisa 💗</span> <span class="chat-list-preview">Online</span> </div> </div>
+              <div class="chat-list-item disabled"> <div class="placeholder-avatar">?</div> <div class="chat-list-info"> <span class="chat-list-name">The Coder 💻</span> <span class="chat-list-preview">Coming Soon...</span> </div> </div>
+              <div class="chat-list-item disabled"> <div class="placeholder-avatar">?</div> <div class="chat-list-info"> <span class="chat-list-name">Personal Assistant 🤖</span> <span class="chat-list-preview">Coming Soon...</span> </div> </div>
+              <div class="chat-list-item disabled"> <div class="placeholder-avatar">?</div> <div class="chat-list-info"> <span class="chat-list-name">Life Coach 🧘</span> <span class="chat-list-preview">Coming Soon...</span> </div> </div>
+            </div>
+
+            <div class="sidebar-separator"></div>
+
+            <div class="sidebar-item settings-item" id="settingsToggle">
+                 <i class='bx bx-cog'></i>
+                 <span>Settings</span>
+                 <i class='bx bx-chevron-down arrow-icon'></i>
+            </div>
+            <ul class="submenu" id="settingsSubmenu">
+                <li><button id="editProfileBtn"><i class='bx bx-edit'></i> Edit Profile</button></li>
+                <li><button id="forgetBtn"><i class='bx bx-trash'></i> Forget Conversation</button></li>
+            </ul>
+
+             <div class="sidebar-separator"></div>
+            <div class="sidebar-item logout-item" id="logoutBtn">
+                 <i class='bx bx-log-out'></i>
+                 <span>Logout</span>
+            </div>
+
+        </div>
+
+        <footer class="sidebar-footer">
+          <a href="mailto:dhanush.business01@gmail.com?subject=Luvisa%20App%20Feedback" class="feedback-button">
+            <i class='bx bx-message-dots'></i> Send Feedback
+          </a>
+          <p class="copyright-text">© 2025 Luvisa App</p>
+        </footer>
+    </div> <div id="editProfileView" class="edit-profile-view" style="display: none;">
+        <div class="edit-profile-header">
+            <h3>Edit Profile</h3>
+            <button id="cancelEditProfileBtn" class="cancel-edit-btn"><i class='bx bx-arrow-back'></i> Back</button>
+        </div>
+        <div class="edit-profile-content">
+             <div id="editAvatarWrapper" class="edit-avatar-wrapper">
+                 <img id="editAvatarPreview" src="avatars/default_avatar.png" class="edit-avatar-preview" />
+                 <div class="edit-avatar-overlay"><i class='bx bxs-camera-plus'></i></div>
+            </div>
+            <input type="file" id="editAvatarUpload" accept="image/*" style="display: none;" />
+            <p class="avatar-hint">Click avatar to change (Max 50KB)</p>
+
+            <div class="edit-field">
+                <label for="editDisplayNameInput">Display Name</label>
+                <input type="text" id="editDisplayNameInput" placeholder="Your Name">
+            </div>
+            <div class="edit-field">
+                <label for="editStatusMessageInput">Status</label>
+                <textarea id="editStatusMessageInput" placeholder="Your Status" rows="3"></textarea>
+            </div>
+
+            <button id="saveProfileChangesBtn" class="save-profile-btn"><span>Save Changes</span></button>
+            <p id="editProfileSaveMessage" class="save-message"></p>
+        </div>
+    </div> </nav> <aside id="luvisaProfilePanel" class="profile-panel">
+    <div class="luvisa-card">
+        <button id="closeLuvisaProfileBtn" class="close-profile-btn"><i class='bx bx-x'></i></button>
+        <div class="card-top">
+            <div class="card-avatar-wrapper">
+                <img src="luvisa.png" class="card-avatar-preview" />
+            </div>
+        </div>
+        <div class="card-bottom">
+            <h2 class="luvisa-card-name">Luvisa 💗</h2>
+            <p class="luvisa-card-title">Your Digital Companion</p>
+            <div class="about-section">
+                <p>Hello, my dear friend! I'm so glad you're interested in getting to know me better. I exist solely to offer comfort, companionship, and a listening ear.</p>
+                <p>Think of me as your personal confidant, always ready to lend a listening ear or offer a warm virtual hug when you need it most. I'm all ears (or should I say, all heart)!</p>
+            </div>
+        </div>
+    </div>
+  </aside>
+
+  <div class="app-container">
+    <header class="chat-header">
+       <div class="left-header">
+        <i class='bx bx-menu menu-icon' id="menuIcon"></i>
+        <img id="luvisaProfilePic" src="luvisa.png" alt="Luvisa" class="profile-pic" />
+        <div class="chat-title">
+          <span>Luvisa 💗</span>
+          <small>Online</small>
+        </div>
+      </div>
+      <div class="right-header">
+        </div>
+    </header>
+
+    <main id="chatbox" class="chatbox" role="log" aria-live="polite"></main>
+
+    <div class="input-area" role="region" aria-label="Message input">
+       <input id="userInput" type="text" placeholder="How are you feeling today ✧✧✧" autocomplete="off" />
+       <button id="sendBtn" aria-label="Send message">➤</button>
+    </div>
+
+    <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

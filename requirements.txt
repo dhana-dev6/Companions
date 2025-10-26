@@ -1,0 +1,11 @@
+flask
+flask-cors
+pymongo
+bcrypt
+python-dotenv
+groq
+nltk
+text2emotion
+firebase-admin
+emoji==1.7.0
+gunicorn

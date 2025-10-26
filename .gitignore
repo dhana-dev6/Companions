@@ -1,0 +1,16 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# Google/Firebase credentials
+serviceAccountKey.json
+
+# NLTK data (if downloaded locally)
+nltk_data/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: #e0e0e0;
+}
+
+.card-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn 0.8s ease-in-out;
+}
+
+/* --- The Main ID Card --- */
+.id-card {
+    width: 320px;
+    height: 500px;
+    border-radius: 20px;
+    box-shadow: 0 10px M30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- Top Gradient Section --- */
+.card-top {
+    height: 35%; /* Made this section smaller */
+    background: linear-gradient(135deg, #00c9ff, #92fe9d);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 15px;
+    color: white;
+}
+.card-top::before, .card-top::after {
+    content: ''; position: absolute; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1); z-index: 0;
+}
+.card-top::before { width: 150px; height: 150px; top: -50px; left: -50px; }
+.card-top::after { width: 200px; height: 200px; bottom: -80px; right: -60px; }
+.card-top-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.9em; font-weight: 500; z-index: 1;
+}
+.luvisa-logo-small { width: 24px; height: 24px; border-radius: 50%; }
+
+/* --- Overlapping Avatar --- */
+.avatar-wrapper {
+    position: absolute;
+    top: 20%; /* Adjusted position */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px; height: 110px; border-radius: 50%;
+    border: 5px solid white; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    cursor: pointer; z-index: 10; overflow: hidden;
+}
+.avatar-preview { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+.avatar-overlay {
+    position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5);
+    display: flex; justify-content: center; align-items: center;
+    color: white; font-size: 1.8em; opacity: 0; transition: opacity 0.3s ease;
+}
+.avatar-wrapper:hover .avatar-preview { transform: scale(1.1); }
+.avatar-wrapper:hover .avatar-overlay { opacity: 1; }
+
+/* --- Bottom White Section --- */
+.card-bottom {
+    height: 65%; /* Made this section larger */
+    background: #ffffff;
+    padding: 80px 30px 20px 30px; /* Increased top padding for avatar */
+    display: flex;
+    flex-direction: column;
+    color: #333;
+}
+
+/* --- NEW: User Details Section --- */
+.user-details {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.card-name, .card-status {
+    background: transparent;
+    border: none;
+    outline: none;
+    text-align: center;
+    font-family: 'Poppins', sans-serif;
+    width: 100%;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent; /* Hidden underline */
+}
+
+.card-name {
+    font-size: 1.6em;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 4px;
+}
+
+.card-status {
+    font-size: 0.9em;
+    font-weight: 400;
+    color: #777;
+    resize: none;
+    height: 24px;
+}
+
+/* Show an underline when user clicks to edit */
+.card-name:focus, .card-status:focus {
+    border-bottom: 2px solid #00c9ff;
+}
+/* --- END OF NEW STYLES --- */
+
+.info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px 15px;
+    font-size: 0.85em;
+}
+.info-grid span:nth-child(odd) { font-weight: 600; color: #888; }
+.info-grid span:nth-child(even) { font-weight: 500; text-align: right; }
+.barcode { margin-top: auto; height: 35px; background: repeating-linear-gradient(to right, #333, #333 2px, white 2px, white 4px); }
+
+/* --- Action Buttons (Below Card) --- */
+.button-group { display: flex; gap: 15px; width: 320px; margin-top: 20px; }
+button { flex-grow: 1; border: none; border-radius: 12px; padding: 14px; font-size: 1em; font-weight: 600; font-family: 'Poppins', sans-serif; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden; }
+.primary-btn { background: linear-gradient(135deg, #00c9ff, #92fe9d); color: white; box-shadow: 0 4px 15px rgba(0, 201, 255, 0.4); }
+.primary-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 201, 255, 0.6); }
+.secondary-btn { background: #f0f0f0; color: #555; }
+.secondary-btn:hover { background: #e0e0e0; }
+.save-message { text-align: center; min-height: 20px; margin-top: 15px; font-size: 0.9em; }
+.save-message.success { color: #28a745; }
+.save-message.error { color: #dc3545; }
+
+/* Loading Spinner */
+button.loading span { visibility: hidden; opacity: 0; }
+button.loading::after {
+    content: ''; position: absolute; width: 20px; height: 20px; top: 0; left: 0; right: 0; bottom: 0; margin: auto;
+    border: 3px solid transparent; border-top-color: #ffffff; border-radius: 50%; animation: spin 1s ease infinite;
+}
+
+@keyframes spin { from { transform: rotate(0turn); } to { transform: rotate(1turn); } }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
