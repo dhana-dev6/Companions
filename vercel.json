@@ -16,7 +16,7 @@
       "dest": "main.py"
     },
     {
-      "src": "/web/(.*)",
+      "src": "/(.*\\.(css|js|html|png|mp3|ico))",
       "dest": "/web/$1"
     },
     {
