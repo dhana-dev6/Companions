@@ -54,31 +54,22 @@ def download_nltk_data():
 
 # --- Firebase Initialization ---
 try:
-    firebase_key_base64 = os.getenv("FIREBASE_KEY_BASE64")
+    firebase_key_base64 = os.getenv("FIREBASE_KEY_BASE64") # Vercel Variable
 
-    # --- Vercel (Production) ---
     if firebase_key_base64:
         # Decode the Base64 string into JSON
         firebase_key_json = base64.b64decode(firebase_key_base64).decode('utf-8')
         key_dict = json.loads(firebase_key_json)
-
         cred = credentials.Certificate(key_dict)
-        # Check if Firebase app is already initialized to prevent error
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-            print("✅ Firebase Admin SDK initialized successfully from ENV variable.")
-        else:
-            print("✅ Firebase Admin SDK already initialized.")
+        if not firebase_admin._apps: # Prevent re-initialization error
+             firebase_admin.initialize_app(cred)
+        print("✅ Firebase Admin SDK initialized successfully from ENV variable.")
 
-    # --- Local Fallback ---
-    elif os.path.exists("serviceAccountKey.json"):
-        # Check if Firebase app is already initialized
+    elif os.path.exists("serviceAccountKey.json"): # Local Fallback
         if not firebase_admin._apps:
-            cred = credentials.Certificate("serviceAccountKey.json")
-            firebase_admin.initialize_app(cred)
-            print("✅ Firebase Admin SDK initialized successfully from local file.")
-        else:
-             print("✅ Firebase Admin SDK already initialized.")
+             cred = credentials.Certificate("serviceAccountKey.json")
+             firebase_admin.initialize_app(cred)
+        print("✅ Firebase Admin SDK initialized successfully from local file.")
 
     else:
         print("🔥 Firebase credentials not found (no ENV var or local file).")
