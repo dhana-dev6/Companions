@@ -486,16 +486,17 @@ def chat_endpoint():
     # 5. Send reply
     return jsonify({"success": True, "reply": enhanced_reply, "detected_emotion": emotion}), 200
 
-# --- Start Flask App ---
-if __name__ == '__main__':
-    # NLTK download should be run during build for Vercel,
-    # but run here for local execution if not already downloaded.
+
+# --- Vercel-compatible entry point ---
+def handler(event=None, context=None):
+    """Vercel entry point for serverless Flask app"""
+    return app
+
+# Only for local dev:
+if __name__ == "__main__":
     try:
         download_nltk_data()
     except Exception as e:
         print(f"Warning: NLTK download failed on startup: {e}")
-
-    if db is None:
-        print("🚨 CRITICAL: MongoDB client failed to initialize. Database operations will fail.")
-    print("🚀 Starting Flask application...")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    print("🚀 Starting Flask app locally...")
+    app.run(host="0.0.0.0", port=5000, debug=True)
