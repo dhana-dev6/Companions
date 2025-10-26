@@ -96,7 +96,7 @@ except Exception as e:
 
 # --- Groq Client ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = "mixtral-8x7b-32768" # Corrected/Commonly used model name
+GROQ_MODEL = "openai/gpt-oss-120b" # Corrected/Commonly used model name
 groq = None
 try:
     if not GROQ_API_KEY:
