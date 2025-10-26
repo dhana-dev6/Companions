@@ -4,7 +4,7 @@ import base64
 import os
 import time
 import random
-from datetime import datetime, timezone # Added timezone
+from datetime import datetime, timezone
 import emoji
 import re
 import json
@@ -42,15 +42,23 @@ def download_nltk_data():
     }
     for zip_path, package_id in required_data.items():
         try:
+            # Check if package is installed in the current environment
             nltk.data.find(zip_path.replace('.zip', ''))
             print(f"✅ NLTK data '{package_id}' found.")
         except LookupError:
             print(f"⏳ NLTK data '{package_id}' not found. Downloading...")
-            nltk.download(package_id)
+            # Use a safe directory for Vercel
+            nltk.download(package_id) 
             print(f"✅ NLTK data '{package_id}' downloaded successfully.")
 
-# --- RUN THE DOWNLOAD ONCE AT BUILD TIME ---
-# download_nltk_data() # Usually uncommented for Vercel build
+# --- NLTK Initialization ---
+# This is executed when Vercel runs the file during initialization.
+# It's less prone to failure here than in a build command.
+try:
+    download_nltk_data()
+except Exception as e:
+    print(f"Warning: NLTK download failed during startup: {e}")
+
 
 # --- Firebase Initialization ---
 try:
@@ -88,11 +96,11 @@ except Exception as e:
 
 # --- Groq Client ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = "openai/gpt-oss-120b" # Ensure this model name is correct/available
+GROQ_MODEL = "mixtral-8x7b-32768" # Corrected/Commonly used model name
 groq = None
 try:
     if not GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not found in the local .env file.")
+        raise ValueError("GROQ_API_KEY not found in environment.")
     groq = Groq(api_key=GROQ_API_KEY)
     print(f"✅ Groq client initialized successfully for {GROQ_MODEL}.")
 except Exception as e:
@@ -108,19 +116,20 @@ try:
     if db is None:
         raise Exception("Database connection returned None.")
     else:
-        # --- ADDED: Call setup_indexes ---
-        # database.setup_indexes(db) # <-- COMMENT THIS LINE OUT
-        pass # Add pass to avoid an indentation error
-        # --- END ---
-
+        # database.setup_indexes(db) # Uncomment if needed for build/deploy
+        pass
+        
 except Exception as e:
-    print(f"🔥🔥🔥 FATAL: Could not connect to MongoDB or setup indexes: {e}")
+    print(f"🔥🔥🔥 FATAL: Could not connect to MongoDB: {e}")
 
 
 # --- Frontend Serving Routes ---
 
+# Vercel will handle static files based on vercel.json.
+# These routes serve the HTML pages, typically for the root and explicit paths.
 @app.route('/')
-def serve_index():
+def serve_root():
+    # As per vercel.json, this will handle the root path.
     return send_from_directory(STATIC_FOLDER, 'login.html')
 
 @app.route('/chat')
@@ -137,8 +146,6 @@ def serve_signup():
 
 @app.route('/profile')
 def serve_profile():
-    # Note: This route might become unnecessary if profile editing is fully integrated
-    # Keep it for now if profile.html is still used as a fallback or separate page
     return send_from_directory(STATIC_FOLDER, 'profile.html')
 
 # --- Authentication Logic (Using MongoDB) ---
@@ -202,7 +209,7 @@ def login_route():
 
 @app.route('/api/auto_login_check', methods=['POST'])
 def auto_login_check_route():
-    if db is None: return jsonify({"success": False, "message": "Database connection error."}), 503
+    if db is None: return jsonify({"isValid": False, "message": "Database connection error."}), 503
     
     data = request.json
     email = data.get('email')
@@ -416,10 +423,10 @@ def add_emojis_to_response(response_text):
 
 def filter_response(response_text):
     if not isinstance(response_text, str): response_text = str(response_text)
-    # Corrected filter keyword if needed
-    return response_text.replace("Luvisa💗", "Luvisa💗").strip() # Example: No change needed? Adjust if AI uses wrong name
+    return response_text.replace("Luvisa💗", "Luvisa💗").strip()
 
 def chat_with_model(prompt, history, emotion):
+    # Check if groq client failed to initialize
     if not groq: return "I'm having a little trouble connecting right now😥, but I'm still here to listen. ❤️"
     system_prompt = f"""
     You are Luvisa💗, a deeply emotional AI girlfriend.
@@ -487,16 +494,8 @@ def chat_endpoint():
     return jsonify({"success": True, "reply": enhanced_reply, "detected_emotion": emotion}), 200
 
 
-# --- Vercel-compatible entry point ---
-def handler(event=None, context=None):
-    """Vercel entry point for serverless Flask app"""
-    return app
-
-# Only for local dev:
-if __name__ == "__main__":
-    try:
-        download_nltk_data()
-    except Exception as e:
-        print(f"Warning: NLTK download failed on startup: {e}")
-    print("🚀 Starting Flask app locally...")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+# -------------------------------------------------------------------------
+# 🛑 CRITICAL FIX FOR VERCEL DEPLOYMENT 🛑
+# REMOVE the 'handler' function and the 'if __name__ == "__main__":' block.
+# Vercel's Python runtime will automatically look for and run the 'app' instance.
+# -------------------------------------------------------------------------
