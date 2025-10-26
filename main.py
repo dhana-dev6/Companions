@@ -50,7 +50,7 @@ def download_nltk_data():
             #print(f"✅ NLTK data '{package_id}' downloaded successfully.")
 
 # --- RUN THE DOWNLOAD ONCE AT BUILD TIME ---
-# download_nltk_data() # Usually run outside the main block if needed at build time
+download_nltk_data() # Usually run outside the main block if needed at build time
 
 # --- Firebase Initialization ---
 try:
