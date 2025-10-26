@@ -50,7 +50,7 @@ def download_nltk_data():
             print(f"✅ NLTK data '{package_id}' downloaded successfully.")
 
 # --- RUN THE DOWNLOAD ONCE AT BUILD TIME ---
-download_nltk_data() # Usually uncommented for Vercel build
+# download_nltk_data() # Usually uncommented for Vercel build
 
 # --- Firebase Initialization ---
 try:
@@ -100,7 +100,8 @@ except Exception as e:
     groq = None
 
 # --- MongoDB Client Setup ---
-db = None
+# In main.py, around line 99
+
 try:
     database.load_config() # Loads .env file
     db = database.get_db() # Connects to MongoDB
@@ -108,7 +109,8 @@ try:
         raise Exception("Database connection returned None.")
     else:
         # --- ADDED: Call setup_indexes ---
-        database.setup_indexes(db) # Ensure indexes exist on startup
+        # database.setup_indexes(db) # <-- COMMENT THIS LINE OUT
+        pass # Add pass to avoid an indentation error
         # --- END ---
 
 except Exception as e:
