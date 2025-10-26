@@ -21,7 +21,8 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/web/index.html"
+      "dest": "/web/login.html" 
+      // Changed from index.html to login.html as the primary entry point
     }
   ]
 }
