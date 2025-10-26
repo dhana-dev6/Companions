@@ -1,11 +1,12 @@
 {
+  "version": 2,
   "builds": [
     {
       "src": "main.py",
       "use": "@vercel/python",
       "config": {
-         "maxLambdaSize": "100mb",
-         "runtime": "python3.12"
+        "maxLambdaSize": "100mb",
+        "runtime": "python3.12"
       }
     }
   ],
