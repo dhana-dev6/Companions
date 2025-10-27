@@ -17,27 +17,27 @@
     },
     {
       "src": "/",
-      "dest": "/web/login.html"
+      "dest": "/login.html"
     },
     {
       "src": "/login",
-      "dest": "/web/login.html"
+      "dest": "/login.html"
     },
     {
       "src": "/signup",
-      "dest": "/web/signup.html"
+      "dest": "/signup.html"
     },
     {
       "src": "/chat",
-      "dest": "/web/index.html"
+      "dest": "/index.html"
     },
     {
       "src": "/profile",
-      "dest": "/web/profile.html"
+      "dest": "/profile.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/web/$1"
+      "dest": "/$1"
     }
   ]
 }
