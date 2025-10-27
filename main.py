@@ -43,10 +43,10 @@ def load_config():
 
 def get_db():
     """Connects to MongoDB and returns the database object."""
-    # --- CRITICAL FIX: Using MONGO_CONNECTION_STRING ---
-    uri = os.getenv("MONGO_CONNECTION_STRING")
+    # --- CRITICAL FIX: Using MONGODB_URI ---
+    uri = os.getenv("MONGODB_URI")
     if not uri:
-        raise ValueError("MONGO_CONNECTION_STRING must be set in .env or Vercel config")
+        raise ValueError("MONGODB_URI must be set in .env or Vercel config")
     
     client = MongoClient(uri, server_api=ServerApi('1'))
     
@@ -279,9 +279,9 @@ try:
     load_config() # Loads .env file for local dev (ignored by Vercel)
     
     # 🛑 VERCEL FIX: Check for URI explicitly before attempting connection 🛑
-    # --- CRITICAL FIX: Using MONGO_CONNECTION_STRING ---
-    if not os.getenv("MONGO_CONNECTION_STRING"): 
-        raise Exception("MongoDB URI environment variable (MONGO_CONNECTION_STRING) is missing.")
+    # --- CRITICAL FIX: Using MONGODB_URI ---
+    if not os.getenv("MONGODB_URI"): 
+        raise Exception("MONGODB_URI environment variable (MONGODB_URI) is missing.")
         
     db = get_db() # Connects to MongoDB (uses the function defined above)
     
