@@ -18,9 +18,9 @@ def load_config():
 
 def get_db():
     """Connects to MongoDB and returns the database object."""
-    uri = os.getenv("MONGO_URI")
+    uri = os.getenv("MONGO_CONNECTION_STRING")
     if not uri:
-        raise ValueError("MONGO_URI must be set in .env")
+        raise ValueError("MONGO_CONNECTION_STRING must be set in .env")
     
     client = MongoClient(uri, server_api=ServerApi('1'))
     
