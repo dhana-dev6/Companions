@@ -102,7 +102,7 @@ def update_profile_picture(db, user_id, image_data, content_type):
     Reads image bytes and stores it directly in the user's document.
     Enforces a 50KB size limit.
     """
-    MAX_PROFILE_PIC_SIZE = 50 * 1024  # 50 KB
+    MAX_PROFILE_PIC_SIZE = 100 * 1024  # 100 KB
     
     try:
         if len(image_data) > MAX_PROFILE_PIC_SIZE:
