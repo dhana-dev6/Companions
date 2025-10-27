@@ -4,10 +4,6 @@
     {
       "src": "main.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "web",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -16,28 +12,8 @@
       "dest": "main.py"
     },
     {
-      "src": "/",
-      "dest": "/login.html"
-    },
-    {
-      "src": "/login",
-      "dest": "/login.html"
-    },
-    {
-      "src": "/signup",
-      "dest": "/signup.html"
-    },
-    {
-      "src": "/chat",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/profile",
-      "dest": "/profile.html"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "main.py"
     }
   ]
 }
