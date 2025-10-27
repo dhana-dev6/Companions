@@ -1,5 +1,4 @@
 # main.py
-
 # --- Imports ---
 import bcrypt
 import base64
@@ -13,31 +12,186 @@ import json
 from dotenv import load_dotenv
 from groq import Groq
 import nltk
-
-# ----------------- VERCEL NLTK FIX (START) -----------------
-# VERCEL FIX FOR NLTK:
-# Set the NLTK data path to the only writable directory (/tmp)
-# This MUST be done BEFORE importing text2emotion
-NLTK_DATA_PATH = "/tmp/nltk_data"
-if not os.path.exists(NLTK_DATA_PATH):
-    os.makedirs(NLTK_DATA_PATH)
-nltk.data.path.append(NLTK_DATA_PATH)
-# ----------------- VERCEL NLTK FIX (END) -------------------
-
 import text2emotion as te
 import firebase_admin
 from firebase_admin import credentials, auth
 from bson.objectid import ObjectId
 
-# --- UPDATED: Import send_from_directory ---
+# --- Imports from database.py ---
+import mimetypes
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from bson.binary import Binary, BINARY_SUBTYPE
+from pymongo.errors import DuplicateKeyError
+# ---
+
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
-
-import database # Your database module
 
 # --- Configuration & Setup ---
 # Tell Flask where to find static files (CSS, JS, images)
 STATIC_FOLDER = 'web'
+
+# -------------------------------------------------------------------------
+# --- DATABASE.PY FUNCTIONS (MERGED) ---
+# -------------------------------------------------------------------------
+
+def load_config():
+    """Load .env file."""
+    load_dotenv()
+    print("✅ Environment variables loaded.")
+
+def get_db():
+    """Connects to MongoDB and returns the database object."""
+    # --- CRITICAL FIX: Using MONGO_CONNECTION_STRING ---
+    uri = os.getenv("MONGO_CONNECTION_STRING")
+    if not uri:
+        raise ValueError("MONGO_CONNECTION_STRING must be set in .env or Vercel config")
+    
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    
+    # Ping to confirm connection
+    client.admin.command('ping')
+    print("✅ Pinged deployment. MongoDB connection successful.")
+    
+    return client.luvisa_db
+
+# --- User Operations ---
+
+def register_user(db, email, password):
+    """Creates a new user with a default embedded profile."""
+    try:
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        
+        # Create a default display name from the email
+        display_name = email.split('@')[0].capitalize()
+        
+        user_document = {
+            "email": email,
+            "hashed_password": hashed_password,
+            "created_at": datetime.utcnow(),
+            "profile": {
+                "display_name": display_name,
+                "bio": "Hey there! I’m using Luvisa 💗",
+                "profile_pic": {
+                    "data": None,
+                    "content_type": None
+                }
+            }
+        }
+        
+        result = db.users.insert_one(user_document)
+        return result.inserted_id
+        
+    except DuplicateKeyError:
+        print(f"Attempted to register duplicate email: {email}")
+        return None
+    except Exception as e:
+        print(f"🔥 Error creating user: {e}")
+        return None
+
+def get_user_by_email(db, email):
+    """Finds a user by their email."""
+    return db.users.find_one({"email": email})
+
+def get_user_by_id(db, user_id):
+    """Finds a user by their _id."""
+    try:
+        return db.users.find_one({"_id": ObjectId(user_id)})
+    except Exception as e:
+        print(f"Error finding user by ID: {e}")
+        return None
+
+def check_user_password(user_doc, password):
+    """Checks a provided password against the user's hashed password."""
+    if user_doc and password:
+        return bcrypt.checkpw(password.encode('utf-8'), user_doc['hashed_password'])
+    return False
+
+def update_user_profile(db, user_id, display_name, status_message):
+    """Updates a user's display name and status message."""
+    try:
+        db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {
+                "profile.display_name": display_name,
+                "profile.bio": status_message
+            }}
+        )
+        return True
+    except Exception as e:
+        print(f"🔥 Error updating profile text: {e}")
+        return False
+
+def update_profile_picture(db, user_id, image_data, content_type):
+    """
+    Reads image bytes and stores it directly in the user's document.
+    Enforces a 100KB size limit.
+    """
+    MAX_PROFILE_PIC_SIZE = 100 * 1024  # 100 KB
+    
+    try:
+        if len(image_data) > MAX_PROFILE_PIC_SIZE:
+            actual_size_kb = len(image_data) // 1024
+            print(f"🔥 Error: Image file is too large ({actual_size_kb}KB).")
+            return False
+            
+        print(f"Uploading {len(image_data) // 1024}KB image to MongoDB...")
+
+        db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {
+                "profile.profile_pic.data": Binary(image_data, subtype=BINARY_SUBTYPE),
+                "profile.profile_pic.content_type": content_type
+            }}
+        )
+        print(f"✅ Profile picture stored in database for user {user_id}")
+        return True
+        
+    except Exception as e:
+        print(f"🔥 Error updating profile picture: {e}")
+        return False
+        
+# --- Chat Operations ---
+
+def get_chat_history(db, user_id):
+    """Retrieves all chat messages for a user, ordered by timestamp."""
+    history_cursor = db.chats.find(
+        {"user_id": ObjectId(user_id)},
+        {"_id": 0, "sender": 1, "message": 1, "timestamp": 1} # Projection
+    ).sort("timestamp", 1) # Sort by time ascending
+    
+    return list(history_cursor)
+
+def add_message_to_history(db, user_id, sender, message, timestamp):
+    """Adds a new message to the chat history."""
+    try:
+        message_document = {
+            "user_id": ObjectId(user_id),
+            "sender": sender,
+            "message": message,
+            "timestamp": timestamp
+        }
+        db.chats.insert_one(message_document)
+        return True
+    except Exception as e:
+        print(f"🔥 Error adding message to history: {e}")
+        return False
+
+def delete_chat_history(db, user_id):
+    """Deletes all chat history for a specific user."""
+    try:
+        result = db.chats.delete_many({"user_id": ObjectId(user_id)})
+        print(f"Deleted {result.deleted_count} messages for user {user_id}.")
+        return True
+    except Exception as e:
+        print(f"🔥 Error deleting chat history: {e}")
+        return False
+
+# -------------------------------------------------------------------------
+# --- END OF DATABASE.PY FUNCTIONS ---
+# -------------------------------------------------------------------------
+
 
 # --- Initialize Flask App ---
 app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='')
@@ -45,6 +199,13 @@ CORS(app)
 
 
 # --- NLTK Data Download ---
+# ----------------- VERCEL NLTK FIX (START) -----------------
+NLTK_DATA_PATH = "/tmp/nltk_data"
+if not os.path.exists(NLTK_DATA_PATH):
+    os.makedirs(NLTK_DATA_PATH)
+nltk.data.path.append(NLTK_DATA_PATH)
+# ----------------- VERCEL NLTK FIX (END) -------------------
+
 def download_nltk_data():
     """Checks for and downloads required NLTK data for text2emotion."""
     required_data = {
@@ -55,12 +216,10 @@ def download_nltk_data():
     }
     for zip_path, package_id in required_data.items():
         try:
-            # Check if package is installed in the current environment
             nltk.data.find(zip_path.replace('.zip', ''))
             print(f"✅ NLTK data '{package_id}' found.")
         except LookupError:
             print(f"⏳ NLTK data '{package_id}' not found. Downloading...")
-            # Use a safe directory for Vercel
             # --- FIX APPLIED: Use the /tmp path ---
             nltk.download(package_id, download_dir=NLTK_DATA_PATH) 
             print(f"✅ NLTK data '{package_id}' downloaded successfully.")
@@ -78,12 +237,9 @@ try:
 
     # --- Vercel (Production) ---
     if firebase_key_base64:
-        # Decode the Base64 string into JSON
         firebase_key_json = base64.b64decode(firebase_key_base64).decode('utf-8')
         key_dict = json.loads(firebase_key_json)
-
         cred = credentials.Certificate(key_dict)
-        # Check if Firebase app is already initialized to prevent error
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred)
             print("✅ Firebase Admin SDK initialized successfully from ENV variable.")
@@ -92,24 +248,21 @@ try:
 
     # --- Local Fallback ---
     elif os.path.exists("serviceAccountKey.json"):
-        # Check if Firebase app is already initialized
         if not firebase_admin._apps:
             cred = credentials.Certificate("serviceAccountKey.json")
             firebase_admin.initialize_app(cred)
             print("✅ Firebase Admin SDK initialized successfully from local file.")
         else:
              print("✅ Firebase Admin SDK already initialized.")
-
     else:
         print("🔥 Firebase credentials not found (no ENV var or local file).")
-
 except Exception as e:
     print(f"🔥 Firebase Admin SDK initialization failed: {e}")
 
 # --- Groq Client ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-# --- UPDATED: Use a standard Groq model name ---
-GROQ_MODEL = "llama3-8b-8192" # Using a more common and updated model
+# --- FIX: Using a standard, fast model ---
+GROQ_MODEL = "llama3-8b-8192" 
 groq = None
 try:
     if not GROQ_API_KEY:
@@ -123,14 +276,14 @@ except Exception as e:
 # --- MongoDB Client Setup (Vercel Fixes Applied Here) ---
 db = None # Initialize db as None
 try:
-    database.load_config() # Loads .env file for local dev (ignored by Vercel)
+    load_config() # Loads .env file for local dev (ignored by Vercel)
     
     # 🛑 VERCEL FIX: Check for URI explicitly before attempting connection 🛑
-    # --- SYNTAX ERROR FIX APPLIED HERE ---
+    # --- CRITICAL FIX: Using MONGO_CONNECTION_STRING ---
     if not os.getenv("MONGO_CONNECTION_STRING"): 
         raise Exception("MongoDB URI environment variable (MONGO_CONNECTION_STRING) is missing.")
         
-    db = database.get_db() # Connects to MongoDB
+    db = get_db() # Connects to MongoDB (uses the function defined above)
     
     if db is None:
         raise Exception("Database connection returned None (check URI/network).")
@@ -147,7 +300,6 @@ except Exception as e:
 
 @app.route('/')
 def serve_root():
-    # As per vercel.json, this will handle the root path.
     return send_from_directory(STATIC_FOLDER, 'login.html')
 
 @app.route('/chat')
@@ -170,7 +322,8 @@ def serve_profile():
 
 @app.route('/api/signup', methods=['POST'])
 def signup_route():
-    if db is None: return jsonify({"success": False, "message": "Login failed. Could not connect to server."}), 503
+    # --- FIX: Changed error message to be specific ---
+    if db is None: return jsonify({"success": False, "message": "Signup failed. Could not connect to server."}), 503
     
     data = request.json
     email = data.get('email')
@@ -180,7 +333,8 @@ def signup_route():
     if not re.match(r"[^@]+@[^@]+\.[^@]+", email): return jsonify({"success": False, "message": "Please enter a valid email address."}), 400
 
     try:
-        user_id = database.register_user(db, email, password)
+        # --- FIX: Calling local function ---
+        user_id = register_user(db, email, password) 
         if user_id is None:
             return jsonify({"success": False, "message": "This email is already registered."}), 409
     except Exception as e:
@@ -212,11 +366,13 @@ def login_route():
         return jsonify({"success": False, "message": "Email and password required."}), 400
 
     try:
-        user_doc = database.get_user_by_email(db, email)
+        # --- FIX: Calling local function ---
+        user_doc = get_user_by_email(db, email) 
         if not user_doc:
             return jsonify({"success": False, "message": "User not found"}), 404
-
-        if database.check_user_password(user_doc, password):
+        
+        # --- FIX: Calling local function ---
+        if check_user_password(user_doc, password): 
             return jsonify({"success": True, "message": "Login successful", "email": email}), 200
         else:
             return jsonify({"success": False, "message": "Invalid password"}), 401
@@ -236,7 +392,8 @@ def auto_login_check_route():
         return jsonify({"isValid": False}), 400
 
     try:
-        user_doc = database.get_user_by_email(db, email)
+        # --- FIX: Calling local function ---
+        user_doc = get_user_by_email(db, email) 
         is_valid = user_doc is not None
         return jsonify({"isValid": is_valid}), 200
     except Exception as e:
@@ -253,7 +410,8 @@ def get_user_profile_route():
     if not email: return jsonify({"success": False, "message": "Email query parameter required."}), 400
 
     try:
-        user_doc = database.get_user_by_email(db, email)
+        # --- FIX: Calling local function ---
+        user_doc = get_user_by_email(db, email) 
         if not user_doc:
             return jsonify({"success": False, "message": "User not found"}), 404
 
@@ -290,7 +448,8 @@ def serve_user_avatar(user_id):
     if db is None: return "Database connection error.", 503
 
     try:
-        user_doc = database.get_user_by_id(db, user_id)
+        # --- FIX: Calling local function ---
+        user_doc = get_user_by_id(db, user_id) 
         if user_doc and user_doc.get('profile', {}).get('profile_pic', {}).get('data'):
             pic_data = user_doc['profile']['profile_pic']
             return Response(
@@ -302,10 +461,8 @@ def serve_user_avatar(user_id):
             if os.path.exists(default_path):
                  return send_from_directory(os.path.join(STATIC_FOLDER, 'avatars'), 'default_avatar.png')
             else:
-                 return "Default avatar not found", 404 # Handle missing default
+                 return "Default avatar not found", 404
             
-    except FileNotFoundError: # Should be caught by os.path.exists now
-        return "Default avatar not found", 404
     except Exception as e:
         print(f"Error serving avatar for {user_id}: {e}")
         return "Error serving avatar", 500
@@ -319,27 +476,29 @@ def update_profile_route():
     status_message = request.form.get('status_message')
     avatar_file = request.files.get('avatar_file') 
 
-    user_doc = database.get_user_by_email(db, email)
+    # --- FIX: Calling local function ---
+    user_doc = get_user_by_email(db, email) 
     if not user_doc: return jsonify({"success": False, "message": "User not found"}), 404
 
     user_id = user_doc['_id']
-    avatar_updated_successfully = False # Flag
+    avatar_updated_successfully = False 
 
     try:
         # 1. Update text fields
-        database.update_user_profile(db, user_id, display_name, status_message)
+        # --- FIX: Calling local function ---
+        update_user_profile(db, user_id, display_name, status_message) 
 
         # 2. Update avatar file if provided
         if avatar_file and avatar_file.filename != '':
             image_data = avatar_file.read()
             content_type = avatar_file.mimetype
             
-            success = database.update_profile_picture(db, user_id, image_data, content_type)
+            # --- FIX: Calling local function ---
+            success = update_profile_picture(db, user_id, image_data, content_type) 
             if not success:
-                # Still return success for text fields, but indicate avatar failure
                 return jsonify({
-                    "success": False, # Indicate overall operation had an issue
-                    "message": "Profile text updated, but image was too large (50KB limit).",
+                    "success": False,
+                    "message": "Profile text updated, but image was too large (100KB limit).",
                     "profile_text_updated": True
                  }), 413
             avatar_updated_successfully = True
@@ -349,7 +508,8 @@ def update_profile_route():
         return jsonify({"success": False, "message": "Database error updating profile."}), 500
 
     # 3. Fetch potentially updated avatar status
-    updated_user_doc = database.get_user_by_id(db, user_id) # Re-fetch
+    # --- FIX: Calling local function ---
+    updated_user_doc = get_user_by_id(db, user_id) 
     has_avatar_now = updated_user_doc.get('profile', {}).get('profile_pic', {}).get('data') is not None
     avatar_url = f"/api/avatar/{str(user_id)}" if has_avatar_now else None
 
@@ -376,11 +536,13 @@ def load_chat_history_route():
     email = request.args.get('email')
     if not email: return jsonify({"success": False, "message": "Email query parameter required."}), 400
 
-    user_doc = database.get_user_by_email(db, email)
+    # --- FIX: Calling local function ---
+    user_doc = get_user_by_email(db, email) 
     if not user_doc: return jsonify({"success": False, "message": "User not found."}), 404
 
     try:
-        history = database.get_chat_history(db, user_doc['_id'])
+        # --- FIX: Calling local function ---
+        history = get_chat_history(db, user_doc['_id']) 
         formatted_history = [
             {"sender": r['sender'], "message": r['message'], "time": r['timestamp'].strftime("%Y-%m-%d %H:%M:%S") if isinstance(r.get('timestamp'), datetime) else str(r.get('timestamp'))}
             for r in history
@@ -398,11 +560,13 @@ def forget_memory_route():
     email = data.get('email')
     if not email: return jsonify({"success": False, "message": "Email required."}), 400
 
-    user_doc = database.get_user_by_email(db, email)
+    # --- FIX: Calling local function ---
+    user_doc = get_user_by_email(db, email) 
     if not user_doc: return jsonify({"success": False, "message": "User not found."}), 404
 
     try:
-        database.delete_chat_history(db, user_doc['_id'])
+        # --- FIX: Calling local function ---
+        delete_chat_history(db, user_doc['_id']) 
         return jsonify({"success": True, "message": "Luvisa has forgotten your past conversations 💔"}), 200
     except Exception as e:
         print(f"🔥 Forget memory DB error: {e}")
@@ -474,7 +638,8 @@ def chat_endpoint():
 
     if not email or not text: return jsonify({"success": False, "message": "Email and text message required."}), 400
 
-    user_doc = database.get_user_by_email(db, email)
+    # --- FIX: Calling local function ---
+    user_doc = get_user_by_email(db, email)
     if not user_doc: return jsonify({"success": False, "message": "User not found."}), 404
 
     user_id = user_doc['_id']
@@ -482,7 +647,8 @@ def chat_endpoint():
 
     # 1. Save user message
     try:
-        database.add_message_to_history(db, user_id, 'user', text, current_timestamp)
+        # --- FIX: Calling local function ---
+        add_message_to_history(db, user_id, 'user', text, current_timestamp)
     except Exception as e:
         print(f"🔥 Save user message DB error: {e}")
 
@@ -490,7 +656,8 @@ def chat_endpoint():
     time.sleep(random.uniform(1.2, 2.2)) # Simulate typing
     history = []
     try:
-        history_docs = database.get_chat_history(db, user_id)
+        # --- FIX: Calling local function ---
+        history_docs = get_chat_history(db, user_id)
         history = [ {"sender": r.get('sender'), "message": r.get('message', '')} for r in history_docs ]
     except Exception as e:
          print(f"Error loading history for AI: {e}")
@@ -504,7 +671,8 @@ def chat_endpoint():
 
     # 4. Save AI reply
     try:
-        database.add_message_to_history(db, user_id, 'luvisa', enhanced_reply, ai_timestamp)
+        # --- FIX: Calling local function ---
+        add_message_to_history(db, user_id, 'luvisa', enhanced_reply, ai_timestamp)
     except Exception as e:
         print(f"🔥 Save Luvisa message DB error: {e}")
 
