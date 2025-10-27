@@ -12,7 +12,43 @@ import json
 from dotenv import load_dotenv
 from groq import Groq
 import nltk
-import text2emotion as te
+
+# ----------------- VERCEL NLTK FIX (START) -----------------
+# This fix MUST be here, *before* text2emotion is imported.
+# Vercel has a read-only filesystem, except for /tmp
+# We must download NLTK data to /tmp *before* importing text2emotion
+NLTK_DATA_PATH = "/tmp/nltk_data"
+
+if not os.path.exists(NLTK_DATA_PATH):
+    os.makedirs(NLTK_DATA_PATH)
+
+# Add the /tmp path to NLTK's data path
+nltk.data.path.append(NLTK_DATA_PATH)
+
+# Check and download required NLTK packages to /tmp
+required_packages = ['stopwords', 'punkt', 'wordnet', 'omw-1.4']
+for package in required_packages:
+    try:
+        # Check if package is already available in standard paths or /tmp
+        if not nltk.data.find(f"corpora/{package}") and not nltk.data.find(f"tokenizers/{package}"):
+             raise LookupError
+    except LookupError:
+        try:
+             # Try finding in corpora (e.g., 'stopwords', 'wordnet')
+             nltk.data.find(f"corpora/{package}.zip")
+        except LookupError:
+             try:
+                 # Try finding in tokenizers (e.g., 'punkt')
+                 nltk.data.find(f"tokenizers/{package}.zip")
+             except LookupError:
+                 # If not found anywhere, download it
+                 print(f"Downloading NLTK package: {package} to {NLTK_DATA_PATH}")
+                 nltk.download(package, download_dir=NLTK_DATA_PATH)
+
+print("✅ NLTK data is ready.")
+# ----------------- VERCEL NLTK FIX (END) -------------------
+
+import text2emotion as te # Now this import is safe
 import firebase_admin
 from firebase_admin import credentials, auth
 from bson.objectid import ObjectId
@@ -54,7 +90,7 @@ def get_db():
     client.admin.command('ping')
     print("✅ Pinged deployment. MongoDB connection successful.")
     
-    return client.luvisa_db
+    return client.luvisa-db
 
 # --- User Operations ---
 
@@ -199,36 +235,7 @@ CORS(app)
 
 
 # --- NLTK Data Download ---
-# ----------------- VERCEL NLTK FIX (START) -----------------
-NLTK_DATA_PATH = "/tmp/nltk_data"
-if not os.path.exists(NLTK_DATA_PATH):
-    os.makedirs(NLTK_DATA_PATH)
-nltk.data.path.append(NLTK_DATA_PATH)
-# ----------------- VERCEL NLTK FIX (END) -------------------
-
-def download_nltk_data():
-    """Checks for and downloads required NLTK data for text2emotion."""
-    required_data = {
-        'corpora/wordnet.zip': 'wordnet',
-        'corpora/omw-1.4.zip': 'omw-1.4',
-        'tokenizers/punkt.zip': 'punkt',
-        'corpora/stopwords.zip': 'stopwords'
-    }
-    for zip_path, package_id in required_data.items():
-        try:
-            nltk.data.find(zip_path.replace('.zip', ''))
-            print(f"✅ NLTK data '{package_id}' found.")
-        except LookupError:
-            print(f"⏳ NLTK data '{package_id}' not found. Downloading...")
-            # --- FIX APPLIED: Use the /tmp path ---
-            nltk.download(package_id, download_dir=NLTK_DATA_PATH) 
-            print(f"✅ NLTK data '{package_id}' downloaded successfully.")
-
-# --- NLTK Initialization ---
-try:
-    download_nltk_data()
-except Exception as e:
-    print(f"Warning: NLTK download failed during startup: {e}")
+# (This section is now moved to the top of the file)
 
 
 # --- Firebase Initialization ---
@@ -317,6 +324,31 @@ def serve_signup():
 @app.route('/profile')
 def serve_profile():
     return send_from_directory(STATIC_FOLDER, 'profile.html')
+
+# --- CATCH-ALL ROUTE FOR STATIC ASSETS ---
+# This route will serve files like .css, .js, .png, etc.
+@app.route('/<path:filename>')
+def serve_static_asset(filename):
+    """Serves static files like .css, .js, .png, etc."""
+    
+    # Prevent directory traversal attacks
+    if ".." in filename:
+        return "Invalid path", 400
+        
+    # The 'web' folder is already defined as STATIC_FOLDER
+    file_path = os.path.join(STATIC_FOLDER, filename)
+    
+    # Check if the file exists in the 'web' folder or its subdirectories
+    if os.path.exists(file_path):
+        # send_from_directory handles subdirectories (like /avatars) correctly
+        return send_from_directory(STATIC_FOLDER, filename)
+    else:
+        # If the file is not a static asset, it might be an API route
+        # but the API routes are defined below and will be checked first.
+        # If it's not an API route and not a file, it's a 404.
+        return "File not found", 404
+# --- END NEW ROUTE ---
+
 
 # --- Authentication Logic (Using MongoDB) ---
 
@@ -639,7 +671,7 @@ def chat_endpoint():
     if not email or not text: return jsonify({"success": False, "message": "Email and text message required."}), 400
 
     # --- FIX: Calling local function ---
-    user_doc = get_user_by_email(db, email)
+    user_.doc = get_user_by_email(db, email)
     if not user_doc: return jsonify({"success": False, "message": "User not found."}), 404
 
     user_id = user_doc['_id']
@@ -684,3 +716,4 @@ def chat_endpoint():
 # The Flask app instance 'app' is the Vercel entry point.
 # DO NOT add the if __name__ == "__main__": app.run() block back in.
 # -------------------------------------------------------------------------
+
