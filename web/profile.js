@@ -16,7 +16,9 @@ const saveMessage = document.getElementById('saveMessage'); // Corrected ID
 
 let username = localStorage.getItem('luvisa_user') || null;
 let currentAvatarFile = null; // To hold the selected file object for upload
-const MAX_AVATAR_SIZE_KB = 50; // Match backend limit
+
+// --- FIX: Matched backend limit of 100KB ---
+const MAX_AVATAR_SIZE_KB = 100;
 
 // ---------- Initialization ----------
 window.addEventListener('DOMContentLoaded', async () => {
@@ -42,7 +44,8 @@ async function loadCurrentProfile() {
 
             // --- UPDATED: Handle backend URL or default ---
             if (profile.avatar) {
-                avatarPreview.src = profile.avatar; // Use the URL from the backend
+                // Add a cache-buster query parameter to force browser to reload the image
+                avatarPreview.src = `${profile.avatar}?t=${new Date().getTime()}`;
             } else {
                 avatarPreview.src = DEFAULT_AVATAR_STATIC_PATH;
             }
@@ -137,7 +140,8 @@ async function saveProfileChanges() {
 
             // --- UPDATED: Update preview with URL from response ---
             if (data.profile && data.profile.avatar) {
-                avatarPreview.src = data.profile.avatar; // Use the returned URL
+                 // Add a cache-buster query parameter to force browser to reload the image
+                avatarPreview.src = `${data.profile.avatar}?t=${new Date().getTime()}`;
             } else {
                 avatarPreview.src = DEFAULT_AVATAR_STATIC_PATH;
             }
