@@ -13,6 +13,17 @@ import json
 from dotenv import load_dotenv
 from groq import Groq
 import nltk
+
+# ----------------- VERCEL NLTK FIX (START) -----------------
+# VERCEL FIX FOR NLTK:
+# Set the NLTK data path to the only writable directory (/tmp)
+# This MUST be done BEFORE importing text2emotion
+NLTK_DATA_PATH = "/tmp/nltk_data"
+if not os.path.exists(NLTK_DATA_PATH):
+    os.makedirs(NLTK_DATA_PATH)
+nltk.data.path.append(NLTK_DATA_PATH)
+# ----------------- VERCEL NLTK FIX (END) -------------------
+
 import text2emotion as te
 import firebase_admin
 from firebase_admin import credentials, auth
@@ -50,7 +61,8 @@ def download_nltk_data():
         except LookupError:
             print(f"⏳ NLTK data '{package_id}' not found. Downloading...")
             # Use a safe directory for Vercel
-            nltk.download(package_id) 
+            # --- FIX APPLIED: Use the /tmp path ---
+            nltk.download(package_id, download_dir=NLTK_DATA_PATH) 
             print(f"✅ NLTK data '{package_id}' downloaded successfully.")
 
 # --- NLTK Initialization ---
@@ -97,7 +109,7 @@ except Exception as e:
 # --- Groq Client ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 # --- UPDATED: Use a standard Groq model name ---
-GROQ_MODEL = "openai/gpt-oss-120b" 
+GROQ_MODEL = "llama3-8b-8192" # Using a more common and updated model
 groq = None
 try:
     if not GROQ_API_KEY:
@@ -114,8 +126,9 @@ try:
     database.load_config() # Loads .env file for local dev (ignored by Vercel)
     
     # 🛑 VERCEL FIX: Check for URI explicitly before attempting connection 🛑
-    if not os.getenv("MONGO_URI): 
-        raise Exception("MongoDB URI environment variable (MONGO_URI) is missing.")
+    # --- SYNTAX ERROR FIX APPLIED HERE ---
+    if not os.getenv("MONGO_CONNECTION_STRING"): 
+        raise Exception("MongoDB URI environment variable (MONGO_CONNECTION_STRING) is missing.")
         
     db = database.get_db() # Connects to MongoDB
     
