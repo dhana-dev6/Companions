@@ -6,7 +6,7 @@
       "use": "@vercel/python"
     },
     {
-      "src": "web/**",
+      "src": "web",
       "use": "@vercel/static"
     }
   ],
@@ -16,12 +16,28 @@
       "dest": "main.py"
     },
     {
-      "src": "/(.*\\.(css|js|html|png|mp3|ico))",
-      "dest": "/web/$1"
+      "src": "/",
+      "dest": "/web/login.html"
+    },
+    {
+      "src": "/login",
+      "dest": "/web/login.html"
+    },
+    {
+      "src": "/signup",
+      "dest": "/web/signup.html"
+    },
+    {
+      "src": "/chat",
+      "dest": "/web/index.html"
+    },
+    {
+      "src": "/profile",
+      "dest": "/web/profile.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/web/login.html" 
+      "dest": "/web/$1"
     }
   ]
 }
